@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "report-analysis-hero",
+      "description": "Doctor reviewing a medical chart",
+      "imageUrl": "https://images.unsplash.com/photo-1631507623121-eaaba8d4e7dc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxtZWRpY2FsJTIwY2hhcnR8ZW58MHx8fHwxNzU4NjAyNDY0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "medical chart"
+    },
+    {
+      "id": "interaction-checker-hero",
+      "description": "Pills and healthy food on a table",
+      "imageUrl": "https://images.unsplash.com/photo-1611077544218-c93992b06e92?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxwaWxscyUyMGZvb2R8ZW58MHx8fHwxNzU4NjI4MzEwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pills food"
+    },
+    {
+      "id": "main-hero",
+      "description": "A calm and modern healthcare setting",
+      "imageUrl": "https://images.unsplash.com/photo-1758206523688-ad896d538cf6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxoZWFsdGhjYXJlJTIwc2V0dGluZ3xlbnwwfHx8fDE3NTg2MjgzMTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "healthcare setting"
+    }
+  ]
 }
