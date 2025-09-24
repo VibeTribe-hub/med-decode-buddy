@@ -76,31 +76,6 @@ Access the App:
 Open http://localhost:9002 in your browser.
 Verify the medical background image in the hero section or across all pages.
 
-
-
-Project Structure
-med-decode-buddy/
-├── public/
-│   └── images/
-│       └── medical-bg.jpg       # Medical background image
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx          # Global layout with background
-│   │   ├── page.tsx            # Home page with hero section
-│   │   └── globals.css         # Tailwind CSS styles
-│   ├── components/
-│   │   ├── layout/
-│   │   │   ├── header.tsx      # Header component
-│   │   │   └── footer.tsx      # Footer component
-│   │   ├── ui/                 # Radix UI components
-│   │   └── faq.tsx             # FAQ component
-│   ├── lib/
-│   │   └── placeholder-images.ts # Placeholder image definitions
-│   └── ai/
-│       └── dev.ts              # Genkit AI configuration
-├── package.json                # Dependencies and scripts
-└── tailwind.config.js          # Tailwind CSS configuration
-
 Customization
 
 Background Image:
@@ -124,15 +99,12 @@ Builds the app in production mode and starts the server.
 Deploy to Vercel, Firebase Hosting, or another platform.
 
 Troubleshooting
-
 Error: 'next' is not recognized:
 Delete node_modules and package-lock.json, then run npm install.
 Verify Node.js and npm versions:node -v  # Should show v20.x or later
 npm -v   # Should show v10.x or later
 
-
 Try running without Turbopack: Update package.json to "dev": "next dev -p 9002".
-
 
 Image Not Loading:
 Ensure public/images/medical-bg.jpg exists.
@@ -141,8 +113,6 @@ Test the image URL: http://localhost:9002/images/medical-bg.jpg.
 
 Text Readability:
 Adjust the gradient overlay in page.tsx (hero) or layout.tsx (global):<div className="absolute inset-0 bg-gradient-to-t from-background/80 to-background/20" />
-
-
 
 
 
@@ -157,5 +127,4 @@ Open a pull request.
 
 License
 This project is licensed under the MIT License.
-Contact
-For questions or support, contact [your-email@example.com] or open an issue on GitHub.
+
