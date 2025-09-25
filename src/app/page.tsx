@@ -1,4 +1,3 @@
-"use client";
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -56,4 +55,12 @@ export default function Home() {
           <div className="grid gap-12 md:grid-cols-2">
             <Card className="flex flex-col">
               <CardHeader>
-                <CardTitle className="text-2xl">Lab Report
+                 <CardTitle className="text-2xl">Lab Report</CardTitle>
+                </CardHeader>
+               </Card>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
