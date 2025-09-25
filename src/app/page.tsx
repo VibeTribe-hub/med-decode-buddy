@@ -17,10 +17,10 @@ export default function Home() {
           className="object-cover"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background to-background/30" />
+        <div className="absolute inset-0 bg-black/60" /> {/* Increased overlay opacity for better text contrast */}
         <div className="relative container mx-auto px-4 md:px-6 z-10">
           <div className="max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-primary-foreground">
               Transform Medical Reports Into Clear Insights
             </h1>
             <p className="mt-4 text-lg md:text-xl text-muted-foreground">
@@ -35,14 +35,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === 2. FEATURES SECTION (This replaces your old "Lab Report" card) === */}
+      {/* === 2. FEATURES SECTION (No changes here) === */}
       <section id="features" className="w-full py-12 md:py-24 lg:py-32">
         <div className="container mx-auto px-4 md:px-6">
           <h2 className="text-3xl font-bold tracking-tighter text-center mb-12">
             Our Core Features
           </h2>
           <div className="grid gap-8 md:grid-cols-2">
-            {/* Card 1: Report Analysis */}
             <Link href="/report-analysis">
               <Card className="flex flex-col h-full hover:bg-muted/50 transition-colors">
                 <CardHeader>
@@ -58,8 +57,6 @@ export default function Home() {
                 </CardFooter>
               </Card>
             </Link>
-
-            {/* Card 2: Interaction Checker */}
             <Link href="/interaction-checker">
               <Card className="flex flex-col h-full hover:bg-muted/50 transition-colors">
                 <CardHeader>
@@ -79,30 +76,29 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === 3. HOW IT WORKS SECTION (A new section for clarity) === */}
-      <section id="how-it-works" className="w-full py-12 md:py-24 lg:py-32 bg-muted/20">
+      {/* === 3. HOW IT WORKS SECTION (MODIFIED: Added a solid background color for readability) === */}
+      <section id="how-it-works" className="w-full py-12 md:py-24 lg:py-32 bg-muted">
         <div className="container mx-auto px-4 md:px-6">
           <h2 className="text-3xl font-bold tracking-tighter text-center mb-12">
             Simple Steps to Clarity
           </h2>
           <div className="grid gap-8 md:grid-cols-3 text-center">
             <div className="flex flex-col items-center gap-4">
-              <div className="bg-primary text-primary-foreground rounded-full p-4">
-                {/* You can use an icon here */}
+              <div className="bg-primary text-primary-foreground rounded-full p-4 flex items-center justify-center h-12 w-12">
                 <span className="text-2xl font-bold">1</span>
               </div>
               <h3 className="text-xl font-semibold">Upload Document</h3>
               <p className="text-muted-foreground">Securely upload your medical report, lab result, or prescription list.</p>
             </div>
             <div className="flex flex-col items-center gap-4">
-              <div className="bg-primary text-primary-foreground rounded-full p-4">
+              <div className="bg-primary text-primary-foreground rounded-full p-4 flex items-center justify-center h-12 w-12">
                 <span className="text-2xl font-bold">2</span>
               </div>
               <h3 className="text-xl font-semibold">AI Analysis</h3>
               <p className="text-muted-foreground">Our AI instantly analyzes the document for key information and terminology.</p>
             </div>
             <div className="flex flex-col items-center gap-4">
-              <div className="bg-primary text-primary-foreground rounded-full p-4">
+              <div className="bg-primary text-primary-foreground rounded-full p-4 flex items-center justify-center h-12 w-12">
                 <span className="text-2xl font-bold">3</span>
               </div>
               <h3 className="text-xl font-semibold">Get Clear Insights</h3>
@@ -112,8 +108,8 @@ export default function Home() {
         </div>
       </section>
       
-      {/* === 4. FAQ SECTION (Using the component you already imported) === */}
-      <section id="faq" className="w-full py-12 md:py-24 lg:py-32">
+      {/* === 4. FAQ SECTION (MODIFIED: Added a solid background color for readability) === */}
+      <section id="faq" className="w-full py-12 md:py-24 lg:py-32 bg-background">
         <div className="container mx-auto px-4 md:px-6">
           <h2 className="text-3xl font-bold tracking-tighter text-center mb-12">
             Frequently Asked Questions
