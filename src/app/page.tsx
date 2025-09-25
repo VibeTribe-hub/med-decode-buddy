@@ -4,28 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Faq from '@/components/faq';
 import { ArrowRight } from 'lucide-react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function Home() {
-  const reportAnalysisImage = PlaceHolderImages.find(p => p.id === 'report-analysis-hero');
-  const interactionCheckerImage = PlaceHolderImages.find(p => p.id === 'interaction-checker-hero');
-  const mainHeroImage = PlaceHolderImages.find(p => p.id === 'main-hero'); // Kept for reference, can be removed if unused
-
   return (
     <div className="flex flex-col">
+      {/* === 1. HERO SECTION (No changes here) === */}
       <section className="relative w-full h-[60vh] flex items-center justify-center text-center">
-        {/*
-        {mainHeroImage && (
-          <Image
-            src={mainHeroImage.imageUrl}
-            alt={mainHeroImage.description}
-            fill
-            className="object-cover"
-            data-ai-hint={mainHeroImage.imageHint}
-            priority
-          />
-        )}
-        */}
         <Image
           src="/images/medical-bg.jpg"
           alt="Medical background with stethoscope"
@@ -50,17 +34,96 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* === 2. FEATURES SECTION (This replaces your old "Lab Report" card) === */}
       <section id="features" className="w-full py-12 md:py-24 lg:py-32">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="grid gap-12 md:grid-cols-2">
-            <Card className="flex flex-col">
-              <CardHeader>
-                 <CardTitle className="text-2xl">Lab Report</CardTitle>
+          <h2 className="text-3xl font-bold tracking-tighter text-center mb-12">
+            Our Core Features
+          </h2>
+          <div className="grid gap-8 md:grid-cols-2">
+            {/* Card 1: Report Analysis */}
+            <Link href="/report-analysis">
+              <Card className="flex flex-col h-full hover:bg-muted/50 transition-colors">
+                <CardHeader>
+                  <CardTitle className="text-2xl">Report Analysis</CardTitle>
+                  <CardDescription>
+                    Upload your lab reports, and our AI will translate complex medical terms into simple, easy-to-understand language.
+                  </CardDescription>
                 </CardHeader>
-               </Card>
+                <CardFooter>
+                  <p className="text-sm font-medium text-primary flex items-center">
+                    Analyze a Report <ArrowRight className="ml-2 h-4 w-4" />
+                  </p>
+                </CardFooter>
+              </Card>
+            </Link>
+
+            {/* Card 2: Interaction Checker */}
+            <Link href="/interaction-checker">
+              <Card className="flex flex-col h-full hover:bg-muted/50 transition-colors">
+                <CardHeader>
+                  <CardTitle className="text-2xl">Interaction Checker</CardTitle>
+                  <CardDescription>
+                    Check for potential interactions between different medications to ensure your treatment plan is safe and effective.
+                  </CardDescription>
+                </CardHeader>
+                <CardFooter>
+                  <p className="text-sm font-medium text-primary flex items-center">
+                    Check Interactions <ArrowRight className="ml-2 h-4 w-4" />
+                  </p>
+                </CardFooter>
+              </Card>
+            </Link>
           </div>
         </div>
       </section>
+
+      {/* === 3. HOW IT WORKS SECTION (A new section for clarity) === */}
+      <section id="how-it-works" className="w-full py-12 md:py-24 lg:py-32 bg-muted/20">
+        <div className="container mx-auto px-4 md:px-6">
+          <h2 className="text-3xl font-bold tracking-tighter text-center mb-12">
+            Simple Steps to Clarity
+          </h2>
+          <div className="grid gap-8 md:grid-cols-3 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <div className="bg-primary text-primary-foreground rounded-full p-4">
+                {/* You can use an icon here */}
+                <span className="text-2xl font-bold">1</span>
+              </div>
+              <h3 className="text-xl font-semibold">Upload Document</h3>
+              <p className="text-muted-foreground">Securely upload your medical report, lab result, or prescription list.</p>
+            </div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="bg-primary text-primary-foreground rounded-full p-4">
+                <span className="text-2xl font-bold">2</span>
+              </div>
+              <h3 className="text-xl font-semibold">AI Analysis</h3>
+              <p className="text-muted-foreground">Our AI instantly analyzes the document for key information and terminology.</p>
+            </div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="bg-primary text-primary-foreground rounded-full p-4">
+                <span className="text-2xl font-bold">3</span>
+              </div>
+              <h3 className="text-xl font-semibold">Get Clear Insights</h3>
+              <p className="text-muted-foreground">Receive a simplified summary and clear explanations in seconds.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* === 4. FAQ SECTION (Using the component you already imported) === */}
+      <section id="faq" className="w-full py-12 md:py-24 lg:py-32">
+        <div className="container mx-auto px-4 md:px-6">
+          <h2 className="text-3xl font-bold tracking-tighter text-center mb-12">
+            Frequently Asked Questions
+          </h2>
+          <div className="max-w-3xl mx-auto">
+            <Faq />
+          </div>
+        </div>
+      </section>
+
     </div>
   );
 }
