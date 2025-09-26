@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'; // Import Accordion
 import { X, Loader2, FileUp, Pill, Apple, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 
 import { extractMedicationFromPrescription } from '@/ai/flows/extract-medication-from-prescription';
@@ -22,27 +22,29 @@ type Interaction = {
   severity: 'High' | 'Moderate' | 'Low' | 'Informational';
 };
 
-// Pro-level UI for each interaction
-const InteractionAlert = ({ interaction }: { interaction: Interaction }) => {
+// ==============================================================================
+// == MODIFIED COMPONENT: InteractionAlert now uses an Accordion for details  ==
+// ==============================================================================
+const InteractionAlert = ({ interaction, value }: { interaction: Interaction, value: string }) => {
   const config = {
     High: {
-      className: 'bg-red-100 border-red-400 text-red-800',
-      icon: <AlertCircle className="h-5 w-5 text-red-600" />,
+      className: 'border-red-500',
+      icon: <AlertCircle className="h-5 w-5 text-red-500" />,
       title: 'High Risk',
     },
     Moderate: {
-      className: 'bg-yellow-100 border-yellow-400 text-yellow-800',
-      icon: <AlertTriangle className="h-5 w-5 text-yellow-600" />,
+      className: 'border-yellow-500',
+      icon: <AlertTriangle className="h-5 w-5 text-yellow-500" />,
       title: 'Moderate Risk',
     },
     Low: {
-      className: 'bg-green-100 border-green-400 text-green-800',
-      icon: <Info className="h-5 w-5 text-green-600" />,
+      className: 'border-blue-500',
+      icon: <Info className="h-5 w-5 text-blue-500" />,
       title: 'Low Risk',
     },
     Informational: {
-      className: 'bg-blue-100 border-blue-400 text-blue-800',
-      icon: <Info className="h-5 w-5 text-blue-600" />,
+      className: 'border-gray-500',
+      icon: <Info className="h-5 w-5 text-gray-500" />,
       title: 'Informational',
     },
   };
@@ -50,21 +52,17 @@ const InteractionAlert = ({ interaction }: { interaction: Interaction }) => {
   const alertConfig = config[interaction.severity] || config.Informational;
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className={`flex items-center gap-2 border-l-4 p-3 rounded-md cursor-pointer hover:shadow-md transition ${alertConfig.className}`}>
-            {alertConfig.icon}
-            <div>
-              <p className="font-semibold">{alertConfig.title}: {interaction.med} & {interaction.food}</p>
-            </div>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          {interaction.text}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <AccordionItem value={value} className={`border-l-4 rounded-md px-3 ${alertConfig.className}`}>
+      <AccordionTrigger>
+        <div className="flex items-center gap-3 text-left">
+          {alertConfig.icon}
+          <p className="font-semibold">{alertConfig.title}: {interaction.med} & {interaction.food}</p>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="pt-2 pb-4 px-2 text-muted-foreground">
+        {interaction.text}
+      </AccordionContent>
+    </AccordionItem>
   );
 };
 
@@ -80,7 +78,6 @@ export default function InteractionCheckerPage() {
   const [isChecking, setIsChecking] = useState(false);
   const { toast } = useToast();
 
-  // FileReader as before
   const fileToDataUri = (file: File) => new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
@@ -96,7 +93,6 @@ export default function InteractionCheckerPage() {
     }
   };
 
-  // Original extraction logic kept intact
   const handleExtractMedications = async () => {
     if (!prescriptionFile) {
       toast({ title: 'No file selected', description: 'Please upload a prescription.', variant: 'destructive' });
@@ -127,23 +123,23 @@ export default function InteractionCheckerPage() {
   };
 
   const removeMedication = (index: number) => setMedications(medications.filter((_, i) => i !== index));
-  const handleAddFood = (e: React.FormEvent) => { e.preventDefault(); if(newFood&&!foods.includes(newFood)) setFoods([...foods,newFood]); setNewFood(''); };
-  const removeFood = (index: number) => setFoods(foods.filter((_, i) => i!==index));
+  const handleAddFood = (e: React.FormEvent) => { e.preventDefault(); if (newFood && !foods.includes(newFood)) setFoods([...foods, newFood]); setNewFood(''); };
+  const removeFood = (index: number) => setFoods(foods.filter((_, i) => i !== index));
 
   const handleCheckInteractions = async () => {
-    if (medications.length===0||foods.length===0) {
-      toast({ title:'Missing Information', description:'Please add at least one medication and one food item.', variant:'destructive' });
+    if (medications.length === 0 || foods.length === 0) {
+      toast({ title: 'Missing Information', description: 'Please add at least one medication and one food item.', variant: 'destructive' });
       return;
     }
     setIsChecking(true);
     setInteractions([]);
     try {
       const allInteractions: Interaction[] = [];
-      for(const med of medications.map(m=>m.name)){
-        for(const food of foods){
-          const result = await foodMedicationInteractionCheck({ medications:[med], foods:[food] });
-          if(result.interactions?.length){
-            result.interactions.forEach(interaction=>{
+      for (const med of medications.map(m => m.name)) {
+        for (const food of foods) {
+          const result = await foodMedicationInteractionCheck({ medications: [med], foods: [food] });
+          if (result.interactions?.length) {
+            result.interactions.forEach(interaction => {
               allInteractions.push({
                 med,
                 food,
@@ -155,10 +151,10 @@ export default function InteractionCheckerPage() {
         }
       }
       setInteractions(allInteractions);
-      if(allInteractions.length===0) toast({title:'No Interactions Found', description:'No potential interactions detected.'});
-    } catch(e){
+      if (allInteractions.length === 0) toast({ title: 'No Interactions Found', description: 'No potential interactions detected.' });
+    } catch (e) {
       console.error(e);
-      toast({title:'Check Failed', description:'Could not check for interactions. Please try again.', variant:'destructive'});
+      toast({ title: 'Check Failed', description: 'Could not check for interactions. Please try again.', variant: 'destructive' });
     } finally { setIsChecking(false); }
   };
 
@@ -185,65 +181,63 @@ export default function InteractionCheckerPage() {
                     <label htmlFor="prescription-upload" className="w-full cursor-pointer">
                       <div className="flex items-center justify-center w-full h-24 px-4 bg-card border-2 border-dashed rounded-md hover:border-primary transition">
                         <span className="flex items-center space-x-2">
-                          <FileUp className="w-6 h-6 text-muted-foreground"/>
+                          <FileUp className="w-6 h-6 text-muted-foreground" />
                           <span className="font-medium text-muted-foreground">{prescriptionFileName || "Select a prescription file"}</span>
                         </span>
-                        <Input id="prescription-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png"/>
+                        <Input id="prescription-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
                       </div>
                     </label>
                     <Button onClick={handleExtractMedications} disabled={isExtracting || !prescriptionFile} className="w-full">
-                      {isExtracting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Extract Medications
+                      {isExtracting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Extract Medications
                     </Button>
                   </div>
                 </TabsContent>
                 <TabsContent value="manual" className="pt-4">
                   <form onSubmit={handleAddManualMed} className="space-y-2">
-                    <Input placeholder="Medication Name" value={newMed.name} onChange={e=>setNewMed({...newMed,name:e.target.value})} required/>
+                    <Input placeholder="Medication Name" value={newMed.name} onChange={e => setNewMed({ ...newMed, name: e.target.value })} required />
                     <div className="flex gap-2">
-                      <Input placeholder="Dosage" value={newMed.dosage} onChange={e=>setNewMed({...newMed,dosage:e.target.value})}/>
-                      <Input placeholder="Frequency" value={newMed.frequency} onChange={e=>setNewMed({...newMed,frequency:e.target.value})}/>
+                      <Input placeholder="Dosage" value={newMed.dosage} onChange={e => setNewMed({ ...newMed, dosage: e.target.value })} />
+                      <Input placeholder="Frequency" value={newMed.frequency} onChange={e => setNewMed({ ...newMed, frequency: e.target.value })} />
                     </div>
                     <Button type="submit" className="w-full">Add Medication</Button>
                   </form>
                 </TabsContent>
               </Tabs>
-
-              {medications.length>0 && (
+              {medications.length > 0 && (
                 <div className="mt-6 space-y-2">
                   <h3 className="font-semibold">Your Medications:</h3>
-                  {medications.map((med,i)=>(
+                  {medications.map((med, i) => (
                     <div key={i} className="flex items-center justify-between p-2 rounded-md bg-secondary">
                       <div className="flex items-center gap-2">
-                        <Pill className="h-4 w-4 text-primary"/>
+                        <Pill className="h-4 w-4 text-primary" />
                         <div>
                           <p className="font-medium">{med.name}</p>
                           <p className="text-sm text-muted-foreground">{med.dosage} - {med.frequency}</p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={()=>removeMedication(i)}><X className="h-4 w-4"/></Button>
+                      <Button variant="ghost" size="icon" onClick={() => removeMedication(i)}><X className="h-4 w-4" /></Button>
                     </div>
                   ))}
                 </div>
               )}
             </CardContent>
           </Card>
-
           <Card className="shadow-lg">
             <CardHeader><CardTitle>2. Add Foods</CardTitle></CardHeader>
             <CardContent>
               <form onSubmit={handleAddFood} className="flex gap-2">
-                <Input placeholder="e.g., Milk, Cheese, Alcohol" value={newFood} onChange={e=>setNewFood(e.target.value)}/>
+                <Input placeholder="e.g., Milk, Cheese, Alcohol" value={newFood} onChange={e => setNewFood(e.target.value)} />
                 <Button type="submit">Add Food</Button>
               </form>
-              {foods.length>0 && (
+              {foods.length > 0 && (
                 <div className="mt-6 space-y-2">
                   <h3 className="font-semibold">Your Foods:</h3>
                   <div className="flex flex-wrap gap-2">
-                    {foods.map((food,i)=>(
+                    {foods.map((food, i) => (
                       <div key={i} className="flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-full bg-secondary">
-                        <Apple className="h-4 w-4"/>
+                        <Apple className="h-4 w-4" />
                         <span className="text-sm">{food}</span>
-                        <button onClick={()=>removeFood(i)} className="rounded-full hover:bg-muted p-0.5"><X className="h-3 w-3"/></button>
+                        <button onClick={() => removeFood(i)} className="rounded-full hover:bg-muted p-0.5"><X className="h-3 w-3" /></button>
                       </div>
                     ))}
                   </div>
@@ -251,9 +245,8 @@ export default function InteractionCheckerPage() {
               )}
             </CardContent>
           </Card>
-
-          <Button onClick={handleCheckInteractions} disabled={isChecking || medications.length===0 || foods.length===0} className="w-full text-lg py-6">
-            {isChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} 3. Check for Interactions
+          <Button onClick={handleCheckInteractions} disabled={isChecking || medications.length === 0 || foods.length === 0} className="w-full text-lg py-6">
+            {isChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} 3. Check for Interactions
           </Button>
         </div>
 
@@ -262,15 +255,15 @@ export default function InteractionCheckerPage() {
           <Card className="shadow-lg">
             <CardHeader><CardTitle>Interaction Results</CardTitle></CardHeader>
             <CardContent className="min-h-[200px]">
-              {isChecking && <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>}
-              {!isChecking && interactions.length>0 && (
-                <div className="space-y-4">
-                  {interactions.map((interaction,i)=>(
-                    <InteractionAlert key={i} interaction={interaction}/>
+              {isChecking && <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
+              {!isChecking && interactions.length > 0 && (
+                <Accordion type="single" collapsible className="w-full space-y-2">
+                  {interactions.map((interaction, i) => (
+                    <InteractionAlert key={i} interaction={interaction} value={`item-${i}`} />
                   ))}
-                </div>
+                </Accordion>
               )}
-              {!isChecking && interactions.length===0 && (
+              {!isChecking && interactions.length === 0 && (
                 <div className="text-center text-muted-foreground py-8">
                   <p>Results will appear here.</p>
                   <p className="text-sm">Add medications and foods, then click the button above.</p>
