@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,7 +18,7 @@ type Medication = ExtractMedicationFromPrescriptionOutput['medications'][0];
 export default function InteractionCheckerPage() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [foods, setFoods] = useState<string[]>([]);
-  const [interactions, setInteractions] = useState<string[]>([]);
+  const [interactions, setInteractions] = useState<{ med: string; food: string; text: string }[]>([]);
 
   const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [prescriptionFileName, setPrescriptionFileName] = useState('');
@@ -31,14 +31,12 @@ export default function InteractionCheckerPage() {
 
   const { toast } = useToast();
 
-  const fileToDataUri = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
+  const fileToDataUri = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -61,7 +59,7 @@ export default function InteractionCheckerPage() {
       toast({ title: 'Success', description: 'Medications extracted from prescription.' });
     } catch (error) {
       console.error(error);
-      toast({ title: 'Extraction Failed', description: 'Could not extract medications. Please try again or add them manually.', variant: 'destructive' });
+      toast({ title: 'Extraction Failed', description: 'Could not extract medications. Please try again or add manually.', variant: 'destructive' });
     } finally {
       setIsExtracting(false);
       setPrescriptionFile(null);
@@ -103,16 +101,14 @@ export default function InteractionCheckerPage() {
     setInteractions([]);
 
     try {
-      const allInteractions: string[] = [];
+      const allInteractions: { med: string; food: string; text: string }[] = [];
 
+      // Check each med-food combination
       for (const med of medications.map(m => m.name)) {
         for (const food of foods) {
-          const result = await foodMedicationInteractionCheck({
-            medications: [med],
-            foods: [food]
-          });
-          if (result.interactions?.length > 0) {
-            allInteractions.push(...result.interactions);
+          const result = await foodMedicationInteractionCheck({ medications: [med], foods: [food] });
+          if (result.interactions?.length) {
+            result.interactions.forEach(text => allInteractions.push({ med, food, text }));
           }
         }
       }
@@ -120,7 +116,7 @@ export default function InteractionCheckerPage() {
       setInteractions(allInteractions);
 
       if (allInteractions.length === 0) {
-        toast({ title: 'No Interactions Found', description: 'Our AI did not find any potential interactions.' });
+        toast({ title: 'No Interactions Found', description: 'No potential interactions detected.' });
       }
     } catch (error) {
       console.error(error);
@@ -134,14 +130,13 @@ export default function InteractionCheckerPage() {
     <div className="container mx-auto py-12 px-4 md:px-6">
       <header className="text-center mb-12">
         <h1 className="text-4xl font-bold tracking-tight">Medication Interaction Checker</h1>
-        <p className="mt-2 text-lg text-muted-foreground">
-          Check for potential interactions between your medications and food.
-        </p>
+        <p className="mt-2 text-lg text-muted-foreground">Check potential interactions between your medications and foods.</p>
       </header>
 
       <div className="grid lg:grid-cols-2 gap-8 items-start">
-        {/* Left Column: Add Medications & Foods */}
+        {/* Left Column: Inputs */}
         <div className="space-y-8">
+          {/* Medications Card */}
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>1. Add Medications</CardTitle>
@@ -152,11 +147,10 @@ export default function InteractionCheckerPage() {
                   <TabsTrigger value="upload">Upload Prescription</TabsTrigger>
                   <TabsTrigger value="manual">Add Manually</TabsTrigger>
                 </TabsList>
-
                 <TabsContent value="upload" className="pt-4">
                   <div className="space-y-4">
                     <label htmlFor="prescription-upload" className="w-full">
-                      <div className="flex items-center justify-center w-full h-24 px-4 transition bg-card border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary">
+                      <div className="flex items-center justify-center w-full h-24 px-4 transition bg-card border-2 border-dashed rounded-md cursor-pointer hover:border-primary">
                         <span className="flex items-center space-x-2">
                           <FileUp className="w-6 h-6 text-muted-foreground" />
                           <span className="font-medium text-muted-foreground">{prescriptionFileName || "Select a prescription file"}</span>
@@ -170,13 +164,12 @@ export default function InteractionCheckerPage() {
                     </Button>
                   </div>
                 </TabsContent>
-
                 <TabsContent value="manual" className="pt-4">
                   <form onSubmit={handleAddManualMed} className="space-y-2">
-                    <Input placeholder="Medication Name" value={newMed.name} onChange={e => setNewMed({...newMed, name: e.target.value})} required />
+                    <Input placeholder="Medication Name" value={newMed.name} onChange={e => setNewMed({ ...newMed, name: e.target.value })} required />
                     <div className="flex gap-2">
-                      <Input placeholder="Dosage (e.g., 50mg)" value={newMed.dosage} onChange={e => setNewMed({...newMed, dosage: e.target.value})} />
-                      <Input placeholder="Frequency (e.g., once daily)" value={newMed.frequency} onChange={e => setNewMed({...newMed, frequency: e.target.value})} />
+                      <Input placeholder="Dosage" value={newMed.dosage} onChange={e => setNewMed({ ...newMed, dosage: e.target.value })} />
+                      <Input placeholder="Frequency" value={newMed.frequency} onChange={e => setNewMed({ ...newMed, frequency: e.target.value })} />
                     </div>
                     <Button type="submit" className="w-full">Add Medication</Button>
                   </form>
@@ -203,11 +196,12 @@ export default function InteractionCheckerPage() {
             </CardContent>
           </Card>
 
+          {/* Foods Card */}
           <Card className="shadow-lg">
             <CardHeader><CardTitle>2. Add Foods</CardTitle></CardHeader>
             <CardContent>
               <form onSubmit={handleAddFood} className="flex gap-2">
-                <Input placeholder="e.g., Grapefruit, Milk, Cheese" value={newFood} onChange={e => setNewFood(e.target.value)} />
+                <Input placeholder="e.g., Milk, Cheese, Alcohol" value={newFood} onChange={e => setNewFood(e.target.value)} />
                 <Button type="submit">Add Food</Button>
               </form>
               {foods.length > 0 && (
@@ -227,13 +221,14 @@ export default function InteractionCheckerPage() {
             </CardContent>
           </Card>
 
-          <Button onClick={handleCheckInteractions} disabled={isChecking || medications.length === 0 || foods.length === 0} className="w-full text-lg py-6">
+          {/* Check Interactions Button */}
+          <Button onClick={handleCheckInteractions} className="w-full text-lg py-6">
             {isChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             3. Check for Interactions
           </Button>
         </div>
 
-        {/* Right Column: Interaction Results */}
+        {/* Right Column: Results */}
         <div className="space-y-8 sticky top-24">
           <Card className="shadow-lg">
             <CardHeader>
@@ -245,37 +240,21 @@ export default function InteractionCheckerPage() {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               )}
-
               {!isChecking && interactions.length > 0 && (
                 <div className="space-y-4">
-                  {medications.map((med) => {
-                    const medInteractions = interactions.filter((i) =>
-                      i.toLowerCase().includes(med.name.toLowerCase())
-                    );
-                    if (medInteractions.length === 0) return null;
-
-                    return (
-                      <div key={med.name} className="space-y-2">
-                        <h4 className="font-semibold text-lg">{med.name}</h4>
-                        <div className="space-y-1">
-                          {medInteractions.map((interaction, i) => (
-                            <Alert key={i} variant="destructive">
-                              <AlertCircle className="h-4 w-4" />
-                              <AlertTitle>Potential Interaction</AlertTitle>
-                              <AlertDescription>{interaction}</AlertDescription>
-                            </Alert>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {interactions.map((interaction, i) => (
+                    <Alert key={i} variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>{interaction.med} & {interaction.food}</AlertTitle>
+                      <AlertDescription>{interaction.text}</AlertDescription>
+                    </Alert>
+                  ))}
                 </div>
               )}
-
               {!isChecking && interactions.length === 0 && (
                 <div className="text-center text-muted-foreground py-8">
-                  <p>Results will be shown here.</p>
-                  <p className="text-sm">Add medications and foods, then click the check button.</p>
+                  <p>Results will appear here.</p>
+                  <p className="text-sm">Add medications and foods, then click the button above.</p>
                 </div>
               )}
             </CardContent>
