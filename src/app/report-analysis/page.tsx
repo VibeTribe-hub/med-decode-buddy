@@ -7,24 +7,23 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { labReportSummary } from '@/ai/flows/lab-report-summary';
 import type { LabReportSummaryOutput } from '@/ai/flows/lab-report-summary';
-import { Loader2, FileUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, FileUp, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// A single, robust component to display the entire analysis result
 const AnalysisResult = ({ summary }: { summary: LabReportSummaryOutput }) => {
-  // Determine overall status: check keyFindings and summary text for abnormal terms
-  const hasAbnormalFinding =
-    summary.keyFindings?.some(f => f.status && f.status !== 'Normal') ||
-    /high|elevated|borderline|abnormal/i.test(summary.summary || '');
+  const hasAbnormalFinding = summary.keyFindings?.some(finding => finding.status !== 'Normal');
   const overallStatus = hasAbnormalFinding ? 'Attention Needed' : 'Normal';
 
   const statusConfig = {
     Normal: {
-      icon: <CheckCircle2 className="h-5 w-5" />,
+      icon: <CheckCircle2 className="h-5 w-5 text-green-600" />,
       style: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
       text: "This report indicates a healthy profile with results within normal ranges."
     },
     'Attention Needed': {
-      icon: <AlertTriangle className="h-5 w-5" />,
+      icon: <AlertTriangle className="h-5 w-5 text-yellow-600" />,
       style: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
       text: "This report shows one or more results that may need attention. Please review the findings below."
     },
@@ -32,57 +31,51 @@ const AnalysisResult = ({ summary }: { summary: LabReportSummaryOutput }) => {
   const config = statusConfig[overallStatus];
 
   return (
-    <div className="space-y-6 overflow-auto">
-      {/* Status Banner */}
-      <div className={`flex items-center space-x-3 rounded-md p-4 ${config.style} border`}>
+    <div className="space-y-6">
+      <div className={`flex items-center space-x-3 rounded-md p-4 ${config.style}`}>
         {config.icon}
         <p className="font-medium text-sm">{config.text}</p>
       </div>
-
-      {/* Overall Summary */}
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Overall Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">{summary.summary}</p>
-        </CardContent>
+      <Card>
+        <CardHeader><CardTitle>Overall Summary</CardTitle></CardHeader>
+        <CardContent><p className="text-muted-foreground">{summary.summary}</p></CardContent>
       </Card>
-
-      {/* Key Findings */}
       {summary.keyFindings?.length > 0 && (
         <div>
           <h3 className="text-xl font-semibold mb-4">Key Findings</h3>
-          <div className="space-y-4">
+          <Accordion type="single" collapsible className="w-full space-y-2">
             {summary.keyFindings.map((finding, index) => (
-              <FindingCard key={index} finding={finding} />
+              <FindingAccordionItem key={index} finding={finding} value={`item-${index}`} />
             ))}
-          </div>
+          </Accordion>
         </div>
       )}
     </div>
   );
 };
 
-const FindingCard = ({ finding }: { finding: LabReportSummaryOutput['keyFindings'][0] }) => {
+const FindingAccordionItem = ({ finding, value }: { finding: LabReportSummaryOutput['keyFindings'][0], value: string }) => {
   const statusConfig = {
-    Normal: "text-green-600 dark:text-green-400 font-semibold",
-    High: "text-yellow-600 dark:text-yellow-400 font-semibold",
-    Low: "text-yellow-600 dark:text-yellow-400 font-semibold",
-    Abnormal: "text-red-600 dark:text-red-400 font-semibold",
+    Normal: { color: 'text-green-600 dark:text-green-400', icon: <CheckCircle2 className="h-5 w-5" /> },
+    High: { color: 'text-yellow-600 dark:text-yellow-400', icon: <AlertTriangle className="h-5 w-5" /> },
+    Low: { color: 'text-yellow-600 dark:text-yellow-400', icon: <AlertTriangle className="h-5 w-5" /> },
+    Abnormal: { color: 'text-red-600 dark:text-red-400', icon: <AlertTriangle className="h-5 w-5" /> },
+    Borderline: { color: 'text-yellow-600 dark:text-yellow-400', icon: <Info className="h-5 w-5" /> },
   };
+  const config = statusConfig[finding.status] || statusConfig.Borderline;
+
   return (
-    <Card className="shadow-sm w-full">
-      <CardHeader>
-        <CardTitle className="text-lg">{finding.term}</CardTitle>
-        <CardDescription>
-          Status: <span className={statusConfig[finding.status] || "text-yellow-600 dark:text-yellow-400 font-semibold"}>{finding.status || 'Attention Needed'}</span>
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground">{finding.explanation}</p>
-      </CardContent>
-    </Card>
+    <AccordionItem value={value} className="border rounded-md px-4">
+      <AccordionTrigger>
+        <div className={`flex items-center gap-3 font-semibold ${config.color}`}>
+          {config.icon}
+          <span>{finding.term} - <span className="font-bold">{finding.status}</span></span>
+        </div>
+      </      AccordionTrigger>
+      <AccordionContent className="pt-2 pb-4 px-2 text-muted-foreground dark:text-white">
+        {finding.explanation}
+      </AccordionContent>
+    </AccordionItem>
   );
 };
 
@@ -102,13 +95,12 @@ export default function ReportAnalysisPage() {
     }
   };
 
-  const fileToDataUri = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
+  const fileToDataUri = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -132,33 +124,26 @@ export default function ReportAnalysisPage() {
 
   return (
     <div className="container mx-auto py-12 px-4 md:px-6">
-      <div className="max-w-4xl mx-auto w-full">
+      <div className="max-w-4xl mx-auto">
         <header className="text-center mb-12">
           <h1 className="text-4xl font-bold tracking-tight">Lab Report Analysis</h1>
           <p className="mt-2 text-lg text-muted-foreground">Get a simple, clear summary of your medical lab reports.</p>
         </header>
 
-        {/* Upload Card */}
-        <Card className="shadow-lg w-full">
+        <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Upload Your Report</CardTitle>
             <CardDescription>Supports PDF, JPG, and PNG files.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <label htmlFor="file-upload" className="w-full cursor-pointer">
-                <div className="flex flex-col items-center justify-center w-full h-32 px-4 border-2 border-dashed rounded-md bg-card hover:border-primary transition">
-                  <FileUp className="w-6 h-6 mb-2 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground text-center">
-                    {fileName || "Drag & drop a file or click to select"}
+              <label htmlFor="file-upload" className="w-full">
+                <div className="flex items-center justify-center w-full h-32 px-4 transition bg-card border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none">
+                  <span className="flex items-center space-x-2">
+                    <FileUp className="w-6 h-6 text-muted-foreground" />
+                    <span className="font-medium text-muted-foreground">{fileName || "Drag & drop a file or click to select"}</span>
                   </span>
-                  <Input
-                    id="file-upload"
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileChange}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
+                  <Input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
                 </div>
               </label>
               <Button type="submit" disabled={loading || !file} className="w-full">
@@ -169,15 +154,14 @@ export default function ReportAnalysisPage() {
           </CardContent>
         </Card>
 
-        {/* Analysis Results */}
         <div className="mt-8">
           {loading && (
             <div>
               <h2 className="text-2xl font-bold tracking-tight mb-4">Analysis Results</h2>
               <div className="space-y-4">
-                {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-24 w-full rounded-md" />
-                ))}
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
               </div>
             </div>
           )}
