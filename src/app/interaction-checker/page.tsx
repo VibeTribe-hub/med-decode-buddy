@@ -6,26 +6,72 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { X, Loader2, FileUp, Pill, Apple, AlertCircle } from 'lucide-react';
+import { X, Loader2, FileUp, Pill, Apple, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 
 import { extractMedicationFromPrescription } from '@/ai/flows/extract-medication-from-prescription';
 import type { ExtractMedicationFromPrescriptionOutput } from '@/ai/flows/extract-medication-from-prescription';
 import { foodMedicationInteractionCheck } from '@/ai/flows/food-medication-interaction-check';
 
+// Types
 type Medication = ExtractMedicationFromPrescriptionOutput['medications'][0];
+type Interaction = {
+  med: string;
+  food: string;
+  text: string;
+  severity: 'High' | 'Moderate' | 'Low' | 'Informational';
+};
 
+// ===================================================================
+// == InteractionAlert (color-coded, accessible)                   ==
+// ===================================================================
+const InteractionAlert = ({ interaction }: { interaction: Interaction }) => {
+  const config = {
+    High: {
+      className: "bg-red-100 border-red-400 text-red-800",
+      icon: <AlertCircle className="h-5 w-5 text-red-600" />,
+      title: "High Risk Interaction",
+    },
+    Moderate: {
+      className: "bg-yellow-200 border-yellow-400 text-yellow-900",
+      icon: <AlertTriangle className="h-5 w-5 text-yellow-700" />,
+      title: "Potential Interaction",
+    },
+    Low: {
+      className: "bg-green-100 border-green-400 text-green-800",
+      icon: <Info className="h-5 w-5 text-green-600" />,
+      title: "Low Risk Interaction",
+    },
+    Informational: {
+      className: "bg-blue-100 border-blue-400 text-blue-800",
+      icon: <Info className="h-5 w-5 text-blue-600" />,
+      title: "Informational Note",
+    },
+  };
+
+  const alertConfig = config[interaction.severity] || config.Informational;
+
+  return (
+    <div role="alert" className={`flex items-start gap-2 border-l-4 p-3 rounded-md ${alertConfig.className}`}>
+      {alertConfig.icon}
+      <div>
+        <p className="font-semibold">{alertConfig.title}: {interaction.med} & {interaction.food}</p>
+        <p className="text-sm">{interaction.text}</p>
+      </div>
+    </div>
+  );
+};
+
+// ===================================================================
+// == Main Page                                                   ==
+// ===================================================================
 export default function InteractionCheckerPage() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [foods, setFoods] = useState<string[]>([]);
-  const [interactions, setInteractions] = useState<{ med: string; food: string; text: string }[]>([]);
-
+  const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [prescriptionFileName, setPrescriptionFileName] = useState('');
-
   const [newMed, setNewMed] = useState({ name: '', dosage: '', frequency: '' });
   const [newFood, setNewFood] = useState('');
-
   const [isExtracting, setIsExtracting] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
 
@@ -38,8 +84,8 @@ export default function InteractionCheckerPage() {
     reader.readAsDataURL(file);
   });
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       setPrescriptionFile(file);
       setPrescriptionFileName(file.name);
@@ -56,10 +102,10 @@ export default function InteractionCheckerPage() {
       const dataUri = await fileToDataUri(prescriptionFile);
       const { medications: extractedMeds } = await extractMedicationFromPrescription({ prescriptionDataUri: dataUri });
       setMedications(prev => [...prev, ...extractedMeds]);
-      toast({ title: 'Success', description: 'Medications extracted from prescription.' });
+      toast({ title: 'Success', description: 'Medications extracted successfully.' });
     } catch (error) {
       console.error(error);
-      toast({ title: 'Extraction Failed', description: 'Could not extract medications. Please try again or add manually.', variant: 'destructive' });
+      toast({ title: 'Extraction Failed', description: 'Could not extract medications. Try again or add manually.', variant: 'destructive' });
     } finally {
       setIsExtracting(false);
       setPrescriptionFile(null);
@@ -75,9 +121,7 @@ export default function InteractionCheckerPage() {
     }
   };
 
-  const removeMedication = (index: number) => {
-    setMedications(medications.filter((_, i) => i !== index));
-  };
+  const removeMedication = (index: number) => setMedications(medications.filter((_, i) => i !== index));
 
   const handleAddFood = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,40 +131,41 @@ export default function InteractionCheckerPage() {
     }
   };
 
-  const removeFood = (index: number) => {
-    setFoods(foods.filter((_, i) => i !== index));
-  };
+  const removeFood = (index: number) => setFoods(foods.filter((_, i) => i !== index));
 
   const handleCheckInteractions = async () => {
     if (medications.length === 0 || foods.length === 0) {
-      toast({ title: 'Missing Information', description: 'Please add at least one medication and one food item.', variant: 'destructive' });
+      toast({ title: 'Missing Information', description: 'Add at least one medication and one food.', variant: 'destructive' });
       return;
     }
-
     setIsChecking(true);
     setInteractions([]);
 
     try {
-      const allInteractions: { med: string; food: string; text: string }[] = [];
+      const allInteractions: Interaction[] = [];
 
-      // Check each med-food combination
       for (const med of medications.map(m => m.name)) {
         for (const food of foods) {
           const result = await foodMedicationInteractionCheck({ medications: [med], foods: [food] });
-          if (result.interactions?.length) {
-            result.interactions.forEach(text => allInteractions.push({ med, food, text }));
-          }
+          result.interactions?.forEach(interaction => {
+            allInteractions.push({
+              med,
+              food,
+              text: interaction.text,
+              severity: interaction.severity as Interaction['severity'],
+            });
+          });
         }
       }
 
       setInteractions(allInteractions);
 
       if (allInteractions.length === 0) {
-        toast({ title: 'No Interactions Found', description: 'No potential interactions detected.' });
+        toast({ title: 'No Interactions Found', description: 'No potential interactions detected for your medications and foods.' });
       }
     } catch (error) {
       console.error(error);
-      toast({ title: 'Check Failed', description: 'Could not check for interactions. Please try again.', variant: 'destructive' });
+      toast({ title: 'Check Failed', description: 'Could not check interactions. Please try again.', variant: 'destructive' });
     } finally {
       setIsChecking(false);
     }
@@ -138,9 +183,7 @@ export default function InteractionCheckerPage() {
         <div className="space-y-8">
           {/* Medications Card */}
           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle>1. Add Medications</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>1. Add Medications</CardTitle></CardHeader>
             <CardContent>
               <Tabs defaultValue="upload">
                 <TabsList className="grid w-full grid-cols-2">
@@ -210,7 +253,7 @@ export default function InteractionCheckerPage() {
                   <div className="flex flex-wrap gap-2">
                     {foods.map((food, i) => (
                       <div key={i} className="flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-full bg-secondary">
-                        <Apple className="h-4 w-4 text-accent" />
+                        <Apple className="h-4 w-4" />
                         <span className="text-sm">{food}</span>
                         <button onClick={() => removeFood(i)} className="rounded-full hover:bg-muted p-0.5"><X className="h-3 w-3" /></button>
                       </div>
@@ -221,8 +264,8 @@ export default function InteractionCheckerPage() {
             </CardContent>
           </Card>
 
-          {/* Check Interactions Button */}
-          <Button onClick={handleCheckInteractions} className="w-full text-lg py-6">
+          {/* Check Interactions */}
+          <Button onClick={handleCheckInteractions} disabled={isChecking || medications.length === 0 || foods.length === 0} className="w-full text-lg py-6">
             {isChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             3. Check for Interactions
           </Button>
@@ -231,9 +274,7 @@ export default function InteractionCheckerPage() {
         {/* Right Column: Results */}
         <div className="space-y-8 sticky top-24">
           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle>Interaction Results</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Interaction Results</CardTitle></CardHeader>
             <CardContent className="min-h-[200px]">
               {isChecking && (
                 <div className="flex items-center justify-center h-full">
@@ -243,18 +284,14 @@ export default function InteractionCheckerPage() {
               {!isChecking && interactions.length > 0 && (
                 <div className="space-y-4">
                   {interactions.map((interaction, i) => (
-                    <Alert key={i} variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>{interaction.med} & {interaction.food}</AlertTitle>
-                      <AlertDescription>{interaction.text}</AlertDescription>
-                    </Alert>
+                    <InteractionAlert key={i} interaction={interaction} />
                   ))}
                 </div>
               )}
               {!isChecking && interactions.length === 0 && (
                 <div className="text-center text-muted-foreground py-8">
-                  <p>Results will appear here.</p>
-                  <p className="text-sm">Add medications and foods, then click the button above.</p>
+                  <p className="font-medium">Results will appear here.</p>
+                  <p className="text-sm">Add medications and foods, then click "Check for Interactions".</p>
                 </div>
               )}
             </CardContent>
