@@ -10,9 +10,9 @@ import type { LabReportSummaryOutput } from '@/ai/flows/lab-report-summary';
 import { Loader2, FileUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// A single, robust component to display the entire analysis result
+// This is the only component needed for results. It is self-contained.
 const AnalysisResult = ({ summary }: { summary: LabReportSummaryOutput }) => {
-  // Determine the overall status based on the final summary
+  // SINGLE SOURCE OF TRUTH: Determine status ONLY from the structured keyFindings.
   const hasAbnormalFinding = summary.keyFindings?.some(finding => finding.status !== 'Normal');
   const overallStatus = hasAbnormalFinding ? 'Attention Needed' : 'Normal';
 
@@ -28,18 +28,17 @@ const AnalysisResult = ({ summary }: { summary: LabReportSummaryOutput }) => {
       text: "This report shows one or more results that may need attention. Please review the findings below."
     },
   };
-
   const config = statusConfig[overallStatus];
 
   return (
     <div className="space-y-6">
-      {/* 1. Render the Status Banner */}
+      {/* 1. The Status Banner (now guaranteed to be correct) */}
       <div className={`flex items-center space-x-3 rounded-md p-4 ${config.style}`}>
         {config.icon}
         <p className="font-medium text-sm">{config.text}</p>
       </div>
 
-      {/* 2. Render the overall text summary */}
+      {/* 2. The Overall Summary from the AI */}
       <Card>
         <CardHeader><CardTitle>Overall Summary</CardTitle></CardHeader>
         <CardContent>
@@ -47,7 +46,7 @@ const AnalysisResult = ({ summary }: { summary: LabReportSummaryOutput }) => {
         </CardContent>
       </Card>
 
-      {/* 3. Render a card for each key finding */}
+      {/* 3. The Key Findings from the AI */}
       {summary.keyFindings?.length > 0 && (
         <div>
           <h3 className="text-xl font-semibold mb-4">Key Findings</h3>
@@ -69,14 +68,11 @@ const FindingCard = ({ finding }: { finding: LabReportSummaryOutput['keyFindings
     Low: "text-yellow-600 dark:text-yellow-400 font-semibold",
     Abnormal: "text-red-600 dark:text-red-400 font-semibold",
   };
-
   return (
     <Card className="shadow-sm">
       <CardHeader>
         <CardTitle className="text-lg">{finding.term}</CardTitle>
-        <CardDescription>
-          Status: <span className={statusConfig[finding.status]}>{finding.status}</span>
-        </CardDescription>
+        <CardDescription>Status: <span className={statusConfig[finding.status]}>{finding.status}</span></CardDescription>
       </CardHeader>
       <CardContent>
         <p className="text-muted-foreground">{finding.explanation}</p>
@@ -101,40 +97,28 @@ export default function ReportAnalysisPage() {
     }
   };
 
-  const fileToDataUri = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
+  const fileToDataUri = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!file) {
-      toast({
-        title: 'No file selected',
-        description: 'Please upload a lab report to analyze.',
-        variant: 'destructive',
-      });
+      toast({ title: 'No file selected', description: 'Please upload a lab report to analyze.', variant: 'destructive' });
       return;
     }
-
     setLoading(true);
     setSummary(null);
-
     try {
       const dataUri = await fileToDataUri(file);
       const result = await labReportSummary({ reportDataUri: dataUri });
       setSummary(result);
     } catch (error) {
       console.error('Error analyzing report:', error);
-      toast({
-        title: 'Analysis Failed',
-        description: 'Something went wrong while analyzing your report. Please try again.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Analysis Failed', description: 'Something went wrong while analyzing your report. Please try again.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -145,9 +129,7 @@ export default function ReportAnalysisPage() {
       <div className="max-w-4xl mx-auto">
         <header className="text-center mb-12">
           <h1 className="text-4xl font-bold tracking-tight">Lab Report Analysis</h1>
-          <p className="mt-2 text-lg text-muted-foreground">
-            Get a simple, clear summary of your medical lab reports.
-          </p>
+          <p className="mt-2 text-lg text-muted-foreground">Get a simple, clear summary of your medical lab reports.</p>
         </header>
 
         <Card className="shadow-lg">
@@ -157,19 +139,15 @@ export default function ReportAnalysisPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <label htmlFor="file-upload" className="w-full">
-                  <div className="flex items-center justify-center w-full h-32 px-4 transition bg-card border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none">
-                    <span className="flex items-center space-x-2">
-                      <FileUp className="w-6 h-6 text-muted-foreground" />
-                      <span className="font-medium text-muted-foreground">
-                        {fileName || "Drag & drop a file or click to select"}
-                      </span>
-                    </span>
-                    <Input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
-                  </div>
-                </label>
-              </div>
+              <label htmlFor="file-upload" className="w-full">
+                <div className="flex items-center justify-center w-full h-32 px-4 transition bg-card border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none">
+                  <span className="flex items-center space-x-2">
+                    <FileUp className="w-6 h-6 text-muted-foreground" />
+                    <span className="font-medium text-muted-foreground">{fileName || "Drag & drop a file or click to select"}</span>
+                  </span>
+                  <Input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
+                </div>
+              </label>
               <Button type="submit" disabled={loading || !file} className="w-full">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {loading ? 'Analyzing...' : 'Analyze Report'}
@@ -189,7 +167,6 @@ export default function ReportAnalysisPage() {
               </div>
             </div>
           )}
-
           {!loading && summary && (
             <div>
               <h2 className="text-2xl font-bold tracking-tight mb-4">Analysis Results</h2>
