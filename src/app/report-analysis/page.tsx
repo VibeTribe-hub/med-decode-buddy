@@ -10,14 +10,28 @@ import type { LabReportSummaryOutput } from '@/ai/flows/lab-report-summary';
 import { Loader2, FileUp, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
+
 // Helper function to determine the overall status of the report
-const getOverallStatus = (summary: LabReportSummaryOutput | null) => {
-  if (!summary?.keyFindings) return 'Normal';
-  const hasAbnormal = summary.keyFindings.some(
-    (finding) => finding.status === 'Abnormal' || finding.status === 'High' || finding.status === 'Low'
+const getOverallStatus = (summary: LabReportSummaryOutput | null): 'Normal' | 'Attention Needed' => {
+  // If there's no summary or no key findings, assume it's normal.
+  if (!summary || !summary.keyFindings || summary.keyFindings.length === 0) {
+    return 'Normal';
+  }
+
+  // Check if ANY finding has a status that is not 'Normal'.
+  const hasAbnormalFinding = summary.keyFindings.some(
+    (finding) => finding.status !== 'Normal'
   );
-  return hasAbnormal ? 'Attention Needed' : 'Normal';
+
+  // If we found at least one abnormal finding, the status is 'Attention Needed'.
+  if (hasAbnormalFinding) {
+    return 'Attention Needed';
+  }
+
+  // Only if all findings are 'Normal' do we return 'Normal'.
+  return 'Normal';
 };
+
 
 // =================================================================
 // == NEW COMPONENT: StatusBanner (for the color-coded header)   ==
