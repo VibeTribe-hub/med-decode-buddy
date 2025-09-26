@@ -6,13 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { X, Loader2, FileUp, Pill, Apple, AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { Loader2, FileUp, Pill, Apple, AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import * as Tooltip from '@radix-ui/react-tooltip';
 
 import { extractMedicationFromPrescription } from '@/ai/flows/extract-medication-from-prescription';
 import type { ExtractMedicationFromPrescriptionOutput } from '@/ai/flows/extract-medication-from-prescription';
 import { foodMedicationInteractionCheck } from '@/ai/flows/food-medication-interaction-check';
 
-// Types
 type Medication = ExtractMedicationFromPrescriptionOutput['medications'][0];
 type Interaction = {
   med: string;
@@ -22,7 +22,7 @@ type Interaction = {
 };
 
 // ===================================================================
-// == InteractionAlert (color-coded, accessible)                   ==
+// == Clickable & Hoverable InteractionAlert with Tooltip           ==
 // ===================================================================
 const InteractionAlert = ({ interaction }: { interaction: Interaction }) => {
   const config = {
@@ -51,27 +51,42 @@ const InteractionAlert = ({ interaction }: { interaction: Interaction }) => {
   const alertConfig = config[interaction.severity] || config.Informational;
 
   return (
-    <div role="alert" className={`flex items-start gap-2 border-l-4 p-3 rounded-md ${alertConfig.className}`}>
-      {alertConfig.icon}
-      <div>
-        <p className="font-semibold">{alertConfig.title}: {interaction.med} & {interaction.food}</p>
-        <p className="text-sm">{interaction.text}</p>
-      </div>
-    </div>
+    <Tooltip.Root>
+      <Tooltip.Trigger asChild>
+        <button
+          className={`flex items-start gap-2 border-l-4 p-3 rounded-md w-full text-left hover:shadow-lg transition ${alertConfig.className}`}
+        >
+          {alertConfig.icon}
+          <div>
+            <p className="font-semibold">{alertConfig.title}: {interaction.med} & {interaction.food}</p>
+            <p className="text-sm truncate">{interaction.text}</p>
+          </div>
+        </button>
+      </Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content className="bg-gray-800 text-white p-2 rounded-md text-sm max-w-xs shadow-lg">
+          {interaction.text}
+          <Tooltip.Arrow className="fill-gray-800" />
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
   );
 };
 
 // ===================================================================
-// == Main Page                                                   ==
+// == MAIN PAGE                                                   ==
 // ===================================================================
 export default function InteractionCheckerPage() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [foods, setFoods] = useState<string[]>([]);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
+
   const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [prescriptionFileName, setPrescriptionFileName] = useState('');
+
   const [newMed, setNewMed] = useState({ name: '', dosage: '', frequency: '' });
   const [newFood, setNewFood] = useState('');
+
   const [isExtracting, setIsExtracting] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
 
@@ -84,8 +99,8 @@ export default function InteractionCheckerPage() {
     reader.readAsDataURL(file);
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       setPrescriptionFile(file);
       setPrescriptionFileName(file.name);
@@ -102,10 +117,10 @@ export default function InteractionCheckerPage() {
       const dataUri = await fileToDataUri(prescriptionFile);
       const { medications: extractedMeds } = await extractMedicationFromPrescription({ prescriptionDataUri: dataUri });
       setMedications(prev => [...prev, ...extractedMeds]);
-      toast({ title: 'Success', description: 'Medications extracted successfully.' });
+      toast({ title: 'Success', description: 'Medications extracted from prescription.' });
     } catch (error) {
       console.error(error);
-      toast({ title: 'Extraction Failed', description: 'Could not extract medications. Try again or add manually.', variant: 'destructive' });
+      toast({ title: 'Extraction Failed', description: 'Could not extract medications. Please try again or add manually.', variant: 'destructive' });
     } finally {
       setIsExtracting(false);
       setPrescriptionFile(null);
@@ -121,7 +136,9 @@ export default function InteractionCheckerPage() {
     }
   };
 
-  const removeMedication = (index: number) => setMedications(medications.filter((_, i) => i !== index));
+  const removeMedication = (index: number) => {
+    setMedications(medications.filter((_, i) => i !== index));
+  };
 
   const handleAddFood = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,13 +148,16 @@ export default function InteractionCheckerPage() {
     }
   };
 
-  const removeFood = (index: number) => setFoods(foods.filter((_, i) => i !== index));
+  const removeFood = (index: number) => {
+    setFoods(foods.filter((_, i) => i !== index));
+  };
 
   const handleCheckInteractions = async () => {
     if (medications.length === 0 || foods.length === 0) {
-      toast({ title: 'Missing Information', description: 'Add at least one medication and one food.', variant: 'destructive' });
+      toast({ title: 'Missing Information', description: 'Please add at least one medication and one food item.', variant: 'destructive' });
       return;
     }
+
     setIsChecking(true);
     setInteractions([]);
 
@@ -161,11 +181,11 @@ export default function InteractionCheckerPage() {
       setInteractions(allInteractions);
 
       if (allInteractions.length === 0) {
-        toast({ title: 'No Interactions Found', description: 'No potential interactions detected for your medications and foods.' });
+        toast({ title: 'No Interactions Found', description: 'No potential interactions detected.' });
       }
     } catch (error) {
       console.error(error);
-      toast({ title: 'Check Failed', description: 'Could not check interactions. Please try again.', variant: 'destructive' });
+      toast({ title: 'Check Failed', description: 'Could not check for interactions. Please try again.', variant: 'destructive' });
     } finally {
       setIsChecking(false);
     }
@@ -190,14 +210,13 @@ export default function InteractionCheckerPage() {
                   <TabsTrigger value="upload">Upload Prescription</TabsTrigger>
                   <TabsTrigger value="manual">Add Manually</TabsTrigger>
                 </TabsList>
+
                 <TabsContent value="upload" className="pt-4">
                   <div className="space-y-4">
-                    <label htmlFor="prescription-upload" className="w-full">
-                      <div className="flex items-center justify-center w-full h-24 px-4 transition bg-card border-2 border-dashed rounded-md cursor-pointer hover:border-primary">
-                        <span className="flex items-center space-x-2">
-                          <FileUp className="w-6 h-6 text-muted-foreground" />
-                          <span className="font-medium text-muted-foreground">{prescriptionFileName || "Select a prescription file"}</span>
-                        </span>
+                    <label htmlFor="prescription-upload" className="w-full cursor-pointer">
+                      <div className="flex items-center justify-center w-full h-24 px-4 transition bg-card border-2 border-dashed rounded-md hover:border-primary">
+                        <FileUp className="w-6 h-6 text-muted-foreground" />
+                        <span className="ml-2 font-medium text-muted-foreground">{prescriptionFileName || "Select a prescription file"}</span>
                         <Input id="prescription-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
                       </div>
                     </label>
@@ -207,6 +226,7 @@ export default function InteractionCheckerPage() {
                     </Button>
                   </div>
                 </TabsContent>
+
                 <TabsContent value="manual" className="pt-4">
                   <form onSubmit={handleAddManualMed} className="space-y-2">
                     <Input placeholder="Medication Name" value={newMed.name} onChange={e => setNewMed({ ...newMed, name: e.target.value })} required />
@@ -264,7 +284,6 @@ export default function InteractionCheckerPage() {
             </CardContent>
           </Card>
 
-          {/* Check Interactions */}
           <Button onClick={handleCheckInteractions} disabled={isChecking || medications.length === 0 || foods.length === 0} className="w-full text-lg py-6">
             {isChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             3. Check for Interactions
@@ -290,8 +309,8 @@ export default function InteractionCheckerPage() {
               )}
               {!isChecking && interactions.length === 0 && (
                 <div className="text-center text-muted-foreground py-8">
-                  <p className="font-medium">Results will appear here.</p>
-                  <p className="text-sm">Add medications and foods, then click "Check for Interactions".</p>
+                  <p>Results will appear here.</p>
+                  <p className="text-sm">Add medications and foods, then click the button above.</p>
                 </div>
               )}
             </CardContent>
