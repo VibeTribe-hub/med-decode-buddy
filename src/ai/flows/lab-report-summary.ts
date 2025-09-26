@@ -1,71 +1,71 @@
 'use server';
 /**
- * @fileOverview Analyzes a lab report and provides a simple summary and structured key findings.
- */
+ * @fileOverview Analyzes a lab report and provides a simple summary and structured key findings.
+ */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod'; // It's often better to use 'zod' directly
+import { z } from 'zod';
 
 const LabReportSummaryInputSchema = z.object({
-  reportDataUri: z
-    .string()
-    .describe(
-      'A lab report document, as a data URI that must include a MIME type and use Base64 encoding.'
-    ),
+  reportDataUri: z
+    .string()
+    .describe(
+      'A lab report document, as a data URI that must include a MIME type and use Base64 encoding.'
+    ),
 });
 export type LabReportSummaryInput = z.infer<typeof LabReportSummaryInputSchema>;
 
-// MODIFIED: The output now includes a structured list of key findings
 const LabReportSummaryOutputSchema = z.object({
-  summary: z.string().describe("A brief, overall summary of the report in plain English."),
-  keyFindings: z.array(
-    z.object({
-      term: z.string().describe("The medical term being analyzed."),
-      explanation: z.string().describe("A simple, plain-English explanation of the term and its result."),
-      status: z.enum(["Normal", "High", "Low", "Abnormal", "Borderline"]),
-    })
-  ),
+  summary: z.string().describe("A brief, overall summary of the report in plain English."),
+  keyFindings: z.array(
+    z.object({
+      term: z.string().describe("The medical term being analyzed."),
+      explanation: z.string().describe("A simple, plain-English explanation of the term and its result."),
+      status: z.enum(["Normal", "High", "Low", "Abnormal", "Borderline"]),
+    })
+  ),
 });
 export type LabReportSummaryOutput = z.infer<typeof LabReportSummaryOutputSchema>;
 
 export async function labReportSummary(input: LabReportSummaryInput): Promise<LabReportSummaryOutput> {
-  return labReportSummaryFlow(input);
+  return labReportSummaryFlow(input);
 }
 
-// MODIFIED: The prompt is now much more detailed to get better results
+// MODIFIED: Final prompt with explicit instructions for the main summary
 const prompt = ai.definePrompt({
-  name: 'labReportSummaryPrompt',
-  input: { schema: LabReportSummaryInputSchema },
-  output: { schema: LabReportSummaryOutputSchema },
-  prompt: `
-    You are a friendly medical expert who explains complex lab results in simple, plain English for patients.
-    Analyze the provided lab report.
+  name: 'labReportSummaryPrompt',
+  input: { schema: LabReportSummaryInputSchema },
+  output: { schema: LabReportSummaryOutputSchema },
+  prompt: `
+    You are a friendly medical expert who explains complex lab results in simple, plain English for patients.
+    Analyze the provided lab report.
 
-    Your response must have two parts:
-    1. A brief 'summary' of the overall results.
-    2. A list of 'keyFindings' for important medical terms.
+    **CRITICAL RULE: Both the 'summary' and the 'explanation' for each finding MUST be in plain English and avoid jargon.**
+
+    - BAD SUMMARY: "Your AST and LDL levels are elevated."
+    - GOOD SUMMARY: "Your results show that some of your liver enzyme (AST) and 'bad' cholesterol (LDL) levels are higher than normal. We recommend discussing these with your doctor."
+
+    Your response must have two parts:
+    1. A brief 'summary' of the overall results, written in simple terms.
+    2. A list of 'keyFindings' for important medical terms, each with a plain-English 'explanation'.
 
     For each key finding, you MUST provide:
-    - 'term': The medical term (e.g., "MCHC").
-    - 'status': The result status ('Normal', 'High', 'Low', 'Abnormal', 'Borderline').
-    - 'explanation': A simple explanation of what the term means and what the result implies.
+    - 'term': The medical term (e.g., "MCHC").
+    - 'status': The result status ('Normal', 'High', 'Low', 'Abnormal', 'Borderline').
+    - 'explanation': A simple explanation of what the term means and what the result implies.
 
-    **CRITICAL RULE:** The 'explanation' MUST be in plain English and avoid jargon.
-    - BAD Explanation: "MCHC is slightly elevated."
-    - GOOD Explanation: "Mean Corpuscular Hemoglobin Concentration (MCHC) measures the average concentration of hemoglobin in your red blood cells. Your level is slightly elevated, which is worth discussing with your doctor as it can sometimes relate to certain types of anemia."
-
-    Lab Report: {{media url=reportDataUri}}
-  `,
+    Lab Report: {{media url=reportDataUri}}
+  `,
 });
 
 const labReportSummaryFlow = ai.defineFlow(
-  {
-    name: 'labReportSummaryFlow',
-    inputSchema: LabReportSummaryInputSchema,
-    outputSchema: LabReportSummaryOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt(input);
-    return output!;
-  }
+  {
+    name: 'labReportSummaryFlow',
+    inputSchema: LabReportSummaryInputSchema,
+    outputSchema: LabReportSummaryOutputSchema,
+  },
+  async (input) => {
+    const { output } = await prompt(input);
+    return output!;
+  }
 );
