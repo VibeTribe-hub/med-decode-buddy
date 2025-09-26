@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import type { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,16 +19,16 @@ export default function InteractionCheckerPage() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [foods, setFoods] = useState<string[]>([]);
   const [interactions, setInteractions] = useState<string[]>([]);
-  
+
   const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [prescriptionFileName, setPrescriptionFileName] = useState('');
-  
+
   const [newMed, setNewMed] = useState({ name: '', dosage: '', frequency: '' });
   const [newFood, setNewFood] = useState('');
-  
+
   const [isExtracting, setIsExtracting] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  
+
   const { toast } = useToast();
 
   const fileToDataUri = (file: File): Promise<string> => {
@@ -99,15 +98,28 @@ export default function InteractionCheckerPage() {
       toast({ title: 'Missing Information', description: 'Please add at least one medication and one food item.', variant: 'destructive' });
       return;
     }
+
     setIsChecking(true);
     setInteractions([]);
+
     try {
-      const result = await foodMedicationInteractionCheck({
-        medications: medications.map(m => m.name),
-        foods: foods
-      });
-      setInteractions(result.interactions);
-      if (result.interactions.length === 0) {
+      const allInteractions: string[] = [];
+
+      for (const med of medications.map(m => m.name)) {
+        for (const food of foods) {
+          const result = await foodMedicationInteractionCheck({
+            medications: [med],
+            foods: [food]
+          });
+          if (result.interactions?.length > 0) {
+            allInteractions.push(...result.interactions);
+          }
+        }
+      }
+
+      setInteractions(allInteractions);
+
+      if (allInteractions.length === 0) {
         toast({ title: 'No Interactions Found', description: 'Our AI did not find any potential interactions.' });
       }
     } catch (error) {
@@ -128,6 +140,7 @@ export default function InteractionCheckerPage() {
       </header>
 
       <div className="grid lg:grid-cols-2 gap-8 items-start">
+        {/* Left Column: Add Medications & Foods */}
         <div className="space-y-8">
           <Card className="shadow-lg">
             <CardHeader>
@@ -139,16 +152,17 @@ export default function InteractionCheckerPage() {
                   <TabsTrigger value="upload">Upload Prescription</TabsTrigger>
                   <TabsTrigger value="manual">Add Manually</TabsTrigger>
                 </TabsList>
+
                 <TabsContent value="upload" className="pt-4">
                   <div className="space-y-4">
                     <label htmlFor="prescription-upload" className="w-full">
-                        <div className="flex items-center justify-center w-full h-24 px-4 transition bg-card border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary">
-                          <span className="flex items-center space-x-2">
-                            <FileUp className="w-6 h-6 text-muted-foreground" />
-                            <span className="font-medium text-muted-foreground">{prescriptionFileName || "Select a prescription file"}</span>
-                          </span>
-                          <Input id="prescription-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
-                        </div>
+                      <div className="flex items-center justify-center w-full h-24 px-4 transition bg-card border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary">
+                        <span className="flex items-center space-x-2">
+                          <FileUp className="w-6 h-6 text-muted-foreground" />
+                          <span className="font-medium text-muted-foreground">{prescriptionFileName || "Select a prescription file"}</span>
+                        </span>
+                        <Input id="prescription-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
+                      </div>
                     </label>
                     <Button onClick={handleExtractMedications} disabled={isExtracting || !prescriptionFile} className="w-full">
                       {isExtracting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -156,6 +170,7 @@ export default function InteractionCheckerPage() {
                     </Button>
                   </div>
                 </TabsContent>
+
                 <TabsContent value="manual" className="pt-4">
                   <form onSubmit={handleAddManualMed} className="space-y-2">
                     <Input placeholder="Medication Name" value={newMed.name} onChange={e => setNewMed({...newMed, name: e.target.value})} required />
@@ -167,7 +182,7 @@ export default function InteractionCheckerPage() {
                   </form>
                 </TabsContent>
               </Tabs>
-              
+
               {medications.length > 0 && (
                 <div className="mt-6 space-y-2">
                   <h3 className="font-semibold">Your Medications:</h3>
@@ -211,13 +226,14 @@ export default function InteractionCheckerPage() {
               )}
             </CardContent>
           </Card>
-          
+
           <Button onClick={handleCheckInteractions} disabled={isChecking || medications.length === 0 || foods.length === 0} className="w-full text-lg py-6">
             {isChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             3. Check for Interactions
           </Button>
         </div>
 
+        {/* Right Column: Interaction Results */}
         <div className="space-y-8 sticky top-24">
           <Card className="shadow-lg">
             <CardHeader>
@@ -229,18 +245,34 @@ export default function InteractionCheckerPage() {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               )}
+
               {!isChecking && interactions.length > 0 && (
                 <div className="space-y-4">
-                  {interactions.map((interaction, i) => (
-                    <Alert key={i} variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Potential Interaction</AlertTitle>
-                      <AlertDescription>{interaction}</AlertDescription>
-                    </Alert>
-                  ))}
+                  {medications.map((med) => {
+                    const medInteractions = interactions.filter((i) =>
+                      i.toLowerCase().includes(med.name.toLowerCase())
+                    );
+                    if (medInteractions.length === 0) return null;
+
+                    return (
+                      <div key={med.name} className="space-y-2">
+                        <h4 className="font-semibold text-lg">{med.name}</h4>
+                        <div className="space-y-1">
+                          {medInteractions.map((interaction, i) => (
+                            <Alert key={i} variant="destructive">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertTitle>Potential Interaction</AlertTitle>
+                              <AlertDescription>{interaction}</AlertDescription>
+                            </Alert>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-               {!isChecking && interactions.length === 0 && (
+
+              {!isChecking && interactions.length === 0 && (
                 <div className="text-center text-muted-foreground py-8">
                   <p>Results will be shown here.</p>
                   <p className="text-sm">Add medications and foods, then click the check button.</p>
