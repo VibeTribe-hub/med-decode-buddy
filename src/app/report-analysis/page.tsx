@@ -56,24 +56,43 @@ const AnalysisResult = ({ summary }: { summary: LabReportSummaryOutput }) => {
 
 const FindingAccordionItem = ({ finding, value }: { finding: LabReportSummaryOutput['keyFindings'][0], value: string }) => {
   const statusConfig = {
-    Normal: { color: 'text-green-600 dark:text-green-400', icon: <CheckCircle2 className="h-5 w-5" /> },
-    High: { color: 'text-yellow-600 dark:text-yellow-400', icon: <AlertTriangle className="h-5 w-5" /> },
-    Low: { color: 'text-yellow-600 dark:text-yellow-400', icon: <AlertTriangle className="h-5 w-5" /> },
-    Abnormal: { color: 'text-red-600 dark:text-red-400', icon: <AlertTriangle className="h-5 w-5" /> },
-    Borderline: { color: 'text-yellow-600 dark:text-yellow-400', icon: <Info className="h-5 w-5" /> },
+    Normal: { 
+      colorClass: 'text-green-500 border-green-500', 
+      icon: <CheckCircle2 className="h-5 w-5" /> 
+    },
+    High: { 
+      colorClass: 'text-yellow-500 border-yellow-500', 
+      icon: <AlertTriangle className="h-5 w-5" /> 
+    },
+    Low: { 
+      colorClass: 'text-yellow-500 border-yellow-500', 
+      icon: <AlertTriangle className="h-5 w-5" /> 
+    },
+    Abnormal: { 
+      colorClass: 'text-red-500 border-red-500', 
+      icon: <AlertTriangle className="h-5 w-5" /> 
+    },
+    Borderline: { 
+      colorClass: 'text-yellow-500 border-yellow-500', 
+      icon: <Info className="h-5 w-5" /> 
+    },
   };
   const config = statusConfig[finding.status] || statusConfig.Borderline;
 
   return (
-    <AccordionItem value={value} className="border rounded-md px-4">
-       <AccordionTrigger>
-  <div className={`flex items-center gap-3 font-semibold ${config.color} dark:text-white`}>
-    {config.icon}
-    <span>{finding.term} - <span className="font-bold">{finding.status}</span></span>
-  </div>
+    // Added a semi-opaque background and applied border color for status
+    <AccordionItem 
+      value={value} 
+      className={`border rounded-md px-4 bg-background/60 backdrop-blur-sm border-l-4 ${config.colorClass}`}
+    >
+      <AccordionTrigger>
+        {/* Text is now always white, but the icon keeps the dynamic color */}
+        <div className="flex items-center gap-3 font-semibold text-white">
+          <span className={config.colorClass}>{config.icon}</span>
+          <span>{finding.term} - <span className="font-bold">{finding.status}</span></span>
+        </div>
       </AccordionTrigger>
-
-      <AccordionContent className="pt-2 pb-4 px-2 text-muted-foreground dark:text-white">
+      <AccordionContent className="pt-2 pb-4 px-2 text-gray-300">
         {finding.explanation}
       </AccordionContent>
     </AccordionItem>
