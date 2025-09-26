@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, FileUp, Pill, Apple, AlertCircle, AlertTriangle, Info } from 'lucide-react';
-import * as Tooltip from '@radix-ui/react-tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { X, Loader2, FileUp, Pill, Apple, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 
 import { extractMedicationFromPrescription } from '@/ai/flows/extract-medication-from-prescription';
 import type { ExtractMedicationFromPrescriptionOutput } from '@/ai/flows/extract-medication-from-prescription';
 import { foodMedicationInteractionCheck } from '@/ai/flows/food-medication-interaction-check';
 
+// Types
 type Medication = ExtractMedicationFromPrescriptionOutput['medications'][0];
 type Interaction = {
   med: string;
@@ -21,77 +22,65 @@ type Interaction = {
   severity: 'High' | 'Moderate' | 'Low' | 'Informational';
 };
 
-// ===================================================================
-// == Clickable & Hoverable InteractionAlert with Tooltip           ==
-// ===================================================================
+// Pro-level UI for each interaction
 const InteractionAlert = ({ interaction }: { interaction: Interaction }) => {
   const config = {
     High: {
-      className: "bg-red-100 border-red-400 text-red-800",
+      className: 'bg-red-100 border-red-400 text-red-800',
       icon: <AlertCircle className="h-5 w-5 text-red-600" />,
-      title: "High Risk Interaction",
+      title: 'High Risk',
     },
     Moderate: {
-      className: "bg-yellow-200 border-yellow-400 text-yellow-900",
-      icon: <AlertTriangle className="h-5 w-5 text-yellow-700" />,
-      title: "Potential Interaction",
+      className: 'bg-yellow-100 border-yellow-400 text-yellow-800',
+      icon: <AlertTriangle className="h-5 w-5 text-yellow-600" />,
+      title: 'Moderate Risk',
     },
     Low: {
-      className: "bg-green-100 border-green-400 text-green-800",
+      className: 'bg-green-100 border-green-400 text-green-800',
       icon: <Info className="h-5 w-5 text-green-600" />,
-      title: "Low Risk Interaction",
+      title: 'Low Risk',
     },
     Informational: {
-      className: "bg-blue-100 border-blue-400 text-blue-800",
+      className: 'bg-blue-100 border-blue-400 text-blue-800',
       icon: <Info className="h-5 w-5 text-blue-600" />,
-      title: "Informational Note",
+      title: 'Informational',
     },
   };
 
   const alertConfig = config[interaction.severity] || config.Informational;
 
   return (
-    <Tooltip.Root>
-      <Tooltip.Trigger asChild>
-        <button
-          className={`flex items-start gap-2 border-l-4 p-3 rounded-md w-full text-left hover:shadow-lg transition ${alertConfig.className}`}
-        >
-          {alertConfig.icon}
-          <div>
-            <p className="font-semibold">{alertConfig.title}: {interaction.med} & {interaction.food}</p>
-            <p className="text-sm truncate">{interaction.text}</p>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className={`flex items-center gap-2 border-l-4 p-3 rounded-md cursor-pointer hover:shadow-md transition ${alertConfig.className}`}>
+            {alertConfig.icon}
+            <div>
+              <p className="font-semibold">{alertConfig.title}: {interaction.med} & {interaction.food}</p>
+            </div>
           </div>
-        </button>
-      </Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content className="bg-gray-800 text-white p-2 rounded-md text-sm max-w-xs shadow-lg">
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
           {interaction.text}
-          <Tooltip.Arrow className="fill-gray-800" />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
-// ===================================================================
-// == MAIN PAGE                                                   ==
-// ===================================================================
 export default function InteractionCheckerPage() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [foods, setFoods] = useState<string[]>([]);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
-
   const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [prescriptionFileName, setPrescriptionFileName] = useState('');
-
   const [newMed, setNewMed] = useState({ name: '', dosage: '', frequency: '' });
   const [newFood, setNewFood] = useState('');
-
   const [isExtracting, setIsExtracting] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-
   const { toast } = useToast();
 
+  // FileReader as before
   const fileToDataUri = (file: File) => new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
@@ -99,14 +88,15 @@ export default function InteractionCheckerPage() {
     reader.readAsDataURL(file);
   });
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       setPrescriptionFile(file);
       setPrescriptionFileName(file.name);
     }
   };
 
+  // Original extraction logic kept intact
   const handleExtractMedications = async () => {
     if (!prescriptionFile) {
       toast({ title: 'No file selected', description: 'Please upload a prescription.', variant: 'destructive' });
@@ -136,59 +126,40 @@ export default function InteractionCheckerPage() {
     }
   };
 
-  const removeMedication = (index: number) => {
-    setMedications(medications.filter((_, i) => i !== index));
-  };
-
-  const handleAddFood = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newFood && !foods.includes(newFood)) {
-      setFoods([...foods, newFood]);
-      setNewFood('');
-    }
-  };
-
-  const removeFood = (index: number) => {
-    setFoods(foods.filter((_, i) => i !== index));
-  };
+  const removeMedication = (index: number) => setMedications(medications.filter((_, i) => i !== index));
+  const handleAddFood = (e: React.FormEvent) => { e.preventDefault(); if(newFood&&!foods.includes(newFood)) setFoods([...foods,newFood]); setNewFood(''); };
+  const removeFood = (index: number) => setFoods(foods.filter((_, i) => i!==index));
 
   const handleCheckInteractions = async () => {
-    if (medications.length === 0 || foods.length === 0) {
-      toast({ title: 'Missing Information', description: 'Please add at least one medication and one food item.', variant: 'destructive' });
+    if (medications.length===0||foods.length===0) {
+      toast({ title:'Missing Information', description:'Please add at least one medication and one food item.', variant:'destructive' });
       return;
     }
-
     setIsChecking(true);
     setInteractions([]);
-
     try {
       const allInteractions: Interaction[] = [];
-
-      for (const med of medications.map(m => m.name)) {
-        for (const food of foods) {
-          const result = await foodMedicationInteractionCheck({ medications: [med], foods: [food] });
-          result.interactions?.forEach(interaction => {
-            allInteractions.push({
-              med,
-              food,
-              text: interaction.text,
-              severity: interaction.severity as Interaction['severity'],
+      for(const med of medications.map(m=>m.name)){
+        for(const food of foods){
+          const result = await foodMedicationInteractionCheck({ medications:[med], foods:[food] });
+          if(result.interactions?.length){
+            result.interactions.forEach(interaction=>{
+              allInteractions.push({
+                med,
+                food,
+                text: interaction.text,
+                severity: interaction.severity as Interaction['severity']
+              });
             });
-          });
+          }
         }
       }
-
       setInteractions(allInteractions);
-
-      if (allInteractions.length === 0) {
-        toast({ title: 'No Interactions Found', description: 'No potential interactions detected.' });
-      }
-    } catch (error) {
-      console.error(error);
-      toast({ title: 'Check Failed', description: 'Could not check for interactions. Please try again.', variant: 'destructive' });
-    } finally {
-      setIsChecking(false);
-    }
+      if(allInteractions.length===0) toast({title:'No Interactions Found', description:'No potential interactions detected.'});
+    } catch(e){
+      console.error(e);
+      toast({title:'Check Failed', description:'Could not check for interactions. Please try again.', variant:'destructive'});
+    } finally { setIsChecking(false); }
   };
 
   return (
@@ -199,9 +170,8 @@ export default function InteractionCheckerPage() {
       </header>
 
       <div className="grid lg:grid-cols-2 gap-8 items-start">
-        {/* Left Column: Inputs */}
+        {/* Left: Inputs */}
         <div className="space-y-8">
-          {/* Medications Card */}
           <Card className="shadow-lg">
             <CardHeader><CardTitle>1. Add Medications</CardTitle></CardHeader>
             <CardContent>
@@ -210,48 +180,47 @@ export default function InteractionCheckerPage() {
                   <TabsTrigger value="upload">Upload Prescription</TabsTrigger>
                   <TabsTrigger value="manual">Add Manually</TabsTrigger>
                 </TabsList>
-
                 <TabsContent value="upload" className="pt-4">
                   <div className="space-y-4">
                     <label htmlFor="prescription-upload" className="w-full cursor-pointer">
-                      <div className="flex items-center justify-center w-full h-24 px-4 transition bg-card border-2 border-dashed rounded-md hover:border-primary">
-                        <FileUp className="w-6 h-6 text-muted-foreground" />
-                        <span className="ml-2 font-medium text-muted-foreground">{prescriptionFileName || "Select a prescription file"}</span>
-                        <Input id="prescription-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
+                      <div className="flex items-center justify-center w-full h-24 px-4 bg-card border-2 border-dashed rounded-md hover:border-primary transition">
+                        <span className="flex items-center space-x-2">
+                          <FileUp className="w-6 h-6 text-muted-foreground"/>
+                          <span className="font-medium text-muted-foreground">{prescriptionFileName || "Select a prescription file"}</span>
+                        </span>
+                        <Input id="prescription-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png"/>
                       </div>
                     </label>
                     <Button onClick={handleExtractMedications} disabled={isExtracting || !prescriptionFile} className="w-full">
-                      {isExtracting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Extract Medications
+                      {isExtracting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Extract Medications
                     </Button>
                   </div>
                 </TabsContent>
-
                 <TabsContent value="manual" className="pt-4">
                   <form onSubmit={handleAddManualMed} className="space-y-2">
-                    <Input placeholder="Medication Name" value={newMed.name} onChange={e => setNewMed({ ...newMed, name: e.target.value })} required />
+                    <Input placeholder="Medication Name" value={newMed.name} onChange={e=>setNewMed({...newMed,name:e.target.value})} required/>
                     <div className="flex gap-2">
-                      <Input placeholder="Dosage" value={newMed.dosage} onChange={e => setNewMed({ ...newMed, dosage: e.target.value })} />
-                      <Input placeholder="Frequency" value={newMed.frequency} onChange={e => setNewMed({ ...newMed, frequency: e.target.value })} />
+                      <Input placeholder="Dosage" value={newMed.dosage} onChange={e=>setNewMed({...newMed,dosage:e.target.value})}/>
+                      <Input placeholder="Frequency" value={newMed.frequency} onChange={e=>setNewMed({...newMed,frequency:e.target.value})}/>
                     </div>
                     <Button type="submit" className="w-full">Add Medication</Button>
                   </form>
                 </TabsContent>
               </Tabs>
 
-              {medications.length > 0 && (
+              {medications.length>0 && (
                 <div className="mt-6 space-y-2">
                   <h3 className="font-semibold">Your Medications:</h3>
-                  {medications.map((med, i) => (
+                  {medications.map((med,i)=>(
                     <div key={i} className="flex items-center justify-between p-2 rounded-md bg-secondary">
                       <div className="flex items-center gap-2">
-                        <Pill className="h-4 w-4 text-primary" />
+                        <Pill className="h-4 w-4 text-primary"/>
                         <div>
                           <p className="font-medium">{med.name}</p>
                           <p className="text-sm text-muted-foreground">{med.dosage} - {med.frequency}</p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => removeMedication(i)}><X className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={()=>removeMedication(i)}><X className="h-4 w-4"/></Button>
                     </div>
                   ))}
                 </div>
@@ -259,23 +228,22 @@ export default function InteractionCheckerPage() {
             </CardContent>
           </Card>
 
-          {/* Foods Card */}
           <Card className="shadow-lg">
             <CardHeader><CardTitle>2. Add Foods</CardTitle></CardHeader>
             <CardContent>
               <form onSubmit={handleAddFood} className="flex gap-2">
-                <Input placeholder="e.g., Milk, Cheese, Alcohol" value={newFood} onChange={e => setNewFood(e.target.value)} />
+                <Input placeholder="e.g., Milk, Cheese, Alcohol" value={newFood} onChange={e=>setNewFood(e.target.value)}/>
                 <Button type="submit">Add Food</Button>
               </form>
-              {foods.length > 0 && (
+              {foods.length>0 && (
                 <div className="mt-6 space-y-2">
                   <h3 className="font-semibold">Your Foods:</h3>
                   <div className="flex flex-wrap gap-2">
-                    {foods.map((food, i) => (
+                    {foods.map((food,i)=>(
                       <div key={i} className="flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-full bg-secondary">
-                        <Apple className="h-4 w-4" />
+                        <Apple className="h-4 w-4"/>
                         <span className="text-sm">{food}</span>
-                        <button onClick={() => removeFood(i)} className="rounded-full hover:bg-muted p-0.5"><X className="h-3 w-3" /></button>
+                        <button onClick={()=>removeFood(i)} className="rounded-full hover:bg-muted p-0.5"><X className="h-3 w-3"/></button>
                       </div>
                     ))}
                   </div>
@@ -284,30 +252,25 @@ export default function InteractionCheckerPage() {
             </CardContent>
           </Card>
 
-          <Button onClick={handleCheckInteractions} disabled={isChecking || medications.length === 0 || foods.length === 0} className="w-full text-lg py-6">
-            {isChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            3. Check for Interactions
+          <Button onClick={handleCheckInteractions} disabled={isChecking || medications.length===0 || foods.length===0} className="w-full text-lg py-6">
+            {isChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} 3. Check for Interactions
           </Button>
         </div>
 
-        {/* Right Column: Results */}
+        {/* Right: Results */}
         <div className="space-y-8 sticky top-24">
           <Card className="shadow-lg">
             <CardHeader><CardTitle>Interaction Results</CardTitle></CardHeader>
             <CardContent className="min-h-[200px]">
-              {isChecking && (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              )}
-              {!isChecking && interactions.length > 0 && (
+              {isChecking && <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>}
+              {!isChecking && interactions.length>0 && (
                 <div className="space-y-4">
-                  {interactions.map((interaction, i) => (
-                    <InteractionAlert key={i} interaction={interaction} />
+                  {interactions.map((interaction,i)=>(
+                    <InteractionAlert key={i} interaction={interaction}/>
                   ))}
                 </div>
               )}
-              {!isChecking && interactions.length === 0 && (
+              {!isChecking && interactions.length===0 && (
                 <div className="text-center text-muted-foreground py-8">
                   <p>Results will appear here.</p>
                   <p className="text-sm">Add medications and foods, then click the button above.</p>
