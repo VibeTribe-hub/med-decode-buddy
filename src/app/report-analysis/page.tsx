@@ -7,12 +7,79 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { labReportSummary } from '@/ai/flows/lab-report-summary';
 import type { LabReportSummaryOutput } from '@/ai/flows/lab-report-summary';
-import { Loader2, FileUp } from 'lucide-react';
+import { Loader2, FileUp, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// Helper function to determine the overall status of the report
+const getOverallStatus = (summary: LabReportSummaryOutput | null) => {
+  if (!summary?.keyFindings) return 'Normal';
+  const hasAbnormal = summary.keyFindings.some(
+    (finding) => finding.status === 'Abnormal' || finding.status === 'High' || finding.status === 'Low'
+  );
+  return hasAbnormal ? 'Attention Needed' : 'Normal';
+};
+
+// =================================================================
+// == NEW COMPONENT: StatusBanner (for the color-coded header)   ==
+// =================================================================
+const StatusBanner = ({ summary }: { summary: LabReportSummaryOutput | null }) => {
+  const overallStatus = getOverallStatus(summary);
+
+  const statusConfig = {
+    'Normal': {
+      icon: <CheckCircle2 className="h-5 w-5" />,
+      style: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+      text: "This report indicates a healthy profile with results within normal ranges."
+    },
+    'Attention Needed': {
+      icon: <AlertTriangle className="h-5 w-5" />,
+      style: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+      text: "This report shows one or more results that may need attention. Please review the findings below."
+    },
+  };
+
+  const config = statusConfig[overallStatus];
+
+  return (
+    <div className={`flex items-center space-x-3 rounded-md p-4 mb-6 ${config.style}`}>
+      {config.icon}
+      <p className="font-medium text-sm">{config.text}</p>
+    </div>
+  );
+};
+
+// ===================================================================
+// == NEW COMPONENT: FindingCard (for each structured key finding)  ==
+// ===================================================================
+const FindingCard = ({ finding }: { finding: LabReportSummaryOutput['keyFindings'][0] }) => {
+    const statusConfig = {
+    'Normal': "text-green-600 dark:text-green-400 font-semibold",
+    'High': "text-yellow-600 dark:text-yellow-400 font-semibold",
+    'Low': "text-yellow-600 dark:text-yellow-400 font-semibold",
+    'Abnormal': "text-red-600 dark:text-red-400 font-semibold",
+  };
+  
+  return (
+    <Card className="shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-lg">{finding.term}</CardTitle>
+        <CardDescription>
+          Status: <span className={statusConfig[finding.status]}>{finding.status}</span>
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground">{finding.explanation}</p>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ===================================================================
+// == Main Page Component (with updated rendering logic)            ==
+// ===================================================================
 export default function ReportAnalysisPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState('');
+  const [fileName, setFileName] =useState('');
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<LabReportSummaryOutput | null>(null);
   const { toast } = useToast();
@@ -22,7 +89,7 @@ export default function ReportAnalysisPage() {
     if (selectedFile) {
       setFile(selectedFile);
       setFileName(selectedFile.name);
-      setSummary(null); // Reset summary when a new file is chosen
+      setSummary(null);
     }
   };
 
@@ -74,7 +141,7 @@ export default function ReportAnalysisPage() {
             Get a simple, clear summary of your medical lab reports.
           </p>
         </header>
-        
+
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Upload Your Report</CardTitle>
@@ -102,24 +169,48 @@ export default function ReportAnalysisPage() {
             </form>
           </CardContent>
         </Card>
-
+        
+        {/* ====================================================================== */}
+        {/* == THIS IS THE MODIFIED SECTION FOR DISPLAYING THE ANALYSIS RESULTS == */}
+        {/* ====================================================================== */}
         {(loading || summary) && (
-          <Card className="mt-8 shadow-lg">
-            <CardHeader>
-              <CardTitle>Analysis Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold tracking-tight mb-4">Analysis Results</h2>
+            {loading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            ) : (
+              summary && (
+                <div className="space-y-6">
+                  {/* 1. Render the Status Banner */}
+                  <StatusBanner summary={summary} />
+
+                  {/* 2. Render the overall text summary */}
+                  <Card>
+                    <CardHeader><CardTitle>Overall Summary</CardTitle></CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">{summary.summary}</p>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* 3. Render a card for each key finding */}
+                  {summary.keyFindings?.length > 0 && (
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4">Key Findings</h3>
+                      <div className="space-y-4">
+                        {summary.keyFindings.map((finding, index) => (
+                          <FindingCard key={index} finding={finding} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                summary && <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap">{summary.summary}</div>
-              )}
-            </CardContent>
-          </Card>
+              )
+            )}
+          </div>
         )}
       </div>
     </div>
