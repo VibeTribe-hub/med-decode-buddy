@@ -66,12 +66,13 @@ const FindingAccordionItem = ({ finding, value }: { finding: LabReportSummaryOut
 
   return (
     <AccordionItem value={value} className="border rounded-md px-4">
-      <AccordionTrigger>
-        <div className={`flex items-center gap-3 font-semibold ${config.color}`}>
-          {config.icon}
-          <span>{finding.term} - <span className="font-bold">{finding.status}</span></span>
-        </div>
-      </      AccordionTrigger>
+       <AccordionTrigger>
+  <div className={`flex items-center gap-3 font-semibold ${config.color} dark:text-white`}>
+    {config.icon}
+    <span>{finding.term} - <span className="font-bold">{finding.status}</span></span>
+  </div>
+      </AccordionTrigger>
+
       <AccordionContent className="pt-2 pb-4 px-2 text-muted-foreground dark:text-white">
         {finding.explanation}
       </AccordionContent>
